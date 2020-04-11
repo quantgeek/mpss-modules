@@ -27,4 +27,5 @@ To build, simply run make:
 To install, you must be logged in as root or use sudo:
 
 `# make install`
+
 `$ sudo make install`
