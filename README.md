@@ -22,7 +22,7 @@ Building and Installing
 
 To build, simply run make:
 
-`$ make`
+`$ make MIC_CARD_ARCH=k1om`
 
 To install, you must be logged in as root or use sudo:
 
