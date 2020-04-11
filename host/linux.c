@@ -308,8 +308,11 @@ mic_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	if (mic_msi_enable){
 		for (i = 0; i < MIC_NUM_MSIX_ENTRIES; i ++)
 			bd_info->bi_msix_entries[i].entry = i;
-		err = pci_enable_msix(mic_ctx->bi_pdev, bd_info->bi_msix_entries,
-				      MIC_NUM_MSIX_ENTRIES);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,8,0)
+        err = pci_enable_msix(mic_ctx->bi_pdev, bd_info->bi_msix_entries, MIC_NUM_MSIX_ENTRIES);
+#else
+        err = pci_enable_msix_range(mic_ctx->bi_pdev, bd_info->bi_msix_entries, MIC_NUM_MSIX_ENTRIES, MIC_NUM_MSIX_ENTRIES);
+#endif
 		if (err == 0 ) {
 			// Only support 1 MSIx for now
 			err = request_irq(bd_info->bi_msix_entries[0].vector,
@@ -735,7 +738,7 @@ mic_get_file_size(const char* fn, uint32_t* file_len)
 	uint32_t status = 0;
 	mm_segment_t fs = get_fs();
 
-	set_fs(get_ds());
+	set_fs(KERNEL_DS);
 
 	if (!fn || IS_ERR(filp = filp_open(fn, 0, 0))) {
 		status = EINVAL;
@@ -766,7 +769,7 @@ mic_load_file(const char* fn, uint8_t* buffer, uint32_t max_size)
 	loff_t filp_size, pos = 0;
 
 	mm_segment_t fs = get_fs();
-	set_fs(get_ds());
+	set_fs(KERNEL_DS);
 
 	if (!fn || IS_ERR(filp = filp_open(fn, 0, 0))) {
 		status = EINVAL;

@@ -221,7 +221,13 @@ micveth_setup(struct net_device *dev)
 #if LINUX_VERSION_CODE > KERNEL_VERSION(2,6,28)
 	dev->netdev_ops = &veth_netdev_ops;
 #endif
+
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,11,9))
 	dev->destructor = free_netdev;
+#else
+	dev->needs_free_netdev = false;
+	dev->priv_destructor = free_netdev;
+#endif
 
 	/* Fill in device structure with ethernet-generic values. */
 	dev->mtu = (MICVETH_MAX_PACKET_SIZE);
@@ -231,7 +237,7 @@ micveth_setup(struct net_device *dev)
 }
 
 static int
-micveth_validate(struct nlattr *tb[], struct nlattr *data[])
+micveth_validate(struct nlattr *tb[], struct nlattr *data[], struct netlink_ext_ack *extack)
 {
 	if (tb[IFLA_ADDRESS]) {
 		if (nla_len(tb[IFLA_ADDRESS]) != ETH_ALEN)
