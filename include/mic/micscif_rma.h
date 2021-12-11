@@ -66,6 +66,7 @@
 #include <linux/semaphore.h>
 #include <linux/kthread.h>
 #include <linux/sched.h>
+#include <linux/sched/mm.h>
 #include <linux/delay.h>
 #include <linux/wait.h>
 #include <asm/bug.h>
@@ -922,7 +923,7 @@ static inline int __scif_dec_pinned_vm_lock(struct mm_struct *mm,
 			down_write(&mm->mmap_sem);
 		}
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 1, 0))
-		mm->pinned_vm -= nr_pages;
+		atomic64_sub(nr_pages, &mm->pinned_vm);
 #else
 		mm->locked_vm -= nr_pages;
 #endif
@@ -936,23 +937,18 @@ static inline int __scif_check_inc_pinned_vm(struct mm_struct *mm,
 {
 	if (mm && mic_ulimit_check && nr_pages) {
 		unsigned long locked, lock_limit;
-		locked = nr_pages;
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 1, 0))
-		locked += mm->pinned_vm;
+		locked = atomic64_add_return(nr_pages, &mm->pinned_vm);
 #else
+		locked = nr_pages;
 		locked += mm->locked_vm;
 #endif
 		lock_limit = rlimit(RLIMIT_MEMLOCK) >> PAGE_SHIFT;
 		if ((locked > lock_limit) && !capable(CAP_IPC_LOCK)) {
+			atomic64_sub(nr_pages, &mm->pinned_vm);
 			pr_debug("locked(%lu) > lock_limit(%lu)\n", 
 				    locked, lock_limit);
 			return -ENOMEM;
-		} else {
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 1, 0))
-			mm->pinned_vm = locked;
-#else
-			mm->locked_vm = locked;
-#endif
 		}
 	}
 	return 0;

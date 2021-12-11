@@ -43,7 +43,11 @@ static int micvcons_write(struct tty_struct * tty, const unsigned char *buf,
 								int count);
 static int micvcons_write_room(struct tty_struct *tty);
 static void micvcons_set_termios(struct tty_struct *tty, struct ktermios * old);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,14,0)
 static void micvcons_timeout(unsigned long);
+#else
+static void micvcons_timeout(struct timer_list *);
+#endif
 static void micvcons_throttle(struct tty_struct *tty);
 static void micvcons_unthrottle(struct tty_struct *tty);
 static void micvcons_wakeup_readbuf(struct work_struct *work);
@@ -145,9 +149,14 @@ micvcons_create(int num_bds)
 		}
 		INIT_WORK(&port->dp_wakeup_read_buf, micvcons_wakeup_readbuf);
 	}
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,14,0)
 	vcons_timer.function = micvcons_timeout;
 	vcons_timer.data = (unsigned long)(&timer_list_head);
 	init_timer(&vcons_timer);
+#else
+	timer_setup(&vcons_timer, micvcons_timeout, 0);	
+#endif
 exit:
 	return ret;
 }
@@ -498,10 +507,19 @@ micvcons_wakeup_readbuf(struct work_struct *work)
 		micvcons_del_timer_entry(port);
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,14,0)
 static void
 micvcons_timeout(unsigned long data)
+#else
+static void
+micvcons_timeout(struct timer_list *t)
+#endif
 {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,14,0)
 	struct list_head *timer_list_ptr = (struct list_head *)data;
+#else
+	struct list_head *timer_list_ptr = (struct list_head *)t;
+#endif
 	micvcons_port_t *port;
 	u8 console_active = 0;
 	int num_chars_read = 0;

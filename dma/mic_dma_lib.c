@@ -1496,6 +1496,7 @@ mic_dma_proc_reg_show(struct seq_file *m, void *data)
 				seq_printf(m," {Type: NOP, 0x%#llx"
 					" %#llx} ",  desc.qwords.qw0,
 						   desc.qwords.qw1);
+				break;
 			case MEMCOPY:
 				seq_printf(m," {Type: MEMCOPY, SAP:"
 					" 0x%#llx, DAP: %#llx, length: %#llx} ",
